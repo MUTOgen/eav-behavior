@@ -2,6 +2,7 @@ EAV behavior
 ============
 
 Allows model to work with custom fields on the fly (EAV pattern).
+In this mod multiple values of each attribute implode into OR group logic.
 
 Installing and configuring
 --------------------------
