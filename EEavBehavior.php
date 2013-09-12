@@ -520,6 +520,7 @@ class EEavBehavior extends CActiveRecordBehavior {
 
         $conn = $this->getOwner()->getDbConnection();
         $i = 0;
+		$attr_group = array();
         foreach ($attributes as $attribute => $values) {
             // If search models with attribute name with specified values.
             if (is_string($attribute)) {
@@ -527,22 +528,38 @@ class EEavBehavior extends CActiveRecordBehavior {
                 if (!is_array($values)) $values = array($values);
                 foreach ($values as $value) {
                     $value = $conn->quoteValue($value);
-                    $criteria->join .= "\nJOIN {$this->tableName} eavb$i"
-                                    .  "\nON t.{$pk} = eavb$i.{$this->entityField}"
-                                    .  "\nAND eavb$i.{$this->attributeField} = $attribute"
-                                    .  "\nAND eavb$i.{$this->valueField} = $value";
+                    $attr_group[$attribute][] = $value;
                     $i++;
                 }
             }
             // If search models with attribute name with anything values.
             elseif (is_int($attribute)) {
                 $values = $conn->quoteValue($values);
-                $criteria->join .= "\nJOIN {$this->tableName} eavb$i"
-                                .  "\nON t.{$pk} = eavb$i.{$this->entityField}"
-                                .  "\nAND eavb$i.{$this->attributeField} = $values";
+                $attr_group[$attribute][] = $values;
                 $i++;
             }
         }
+		$i = 0;
+        //If there are several values of one attribute then use OR logic
+        foreach($attr_group as $attribute => $group){
+            $tmp = array();
+            foreach($group as $v){
+                $tmp[] = "eavb$i.{$this->valueField} = $v";
+            }
+            if (is_string($attribute)) {
+                $criteria->join .= "\nJOIN {$this->tableName} eavb$i"
+                    .  "\nON t.{$pk} = eavb$i.{$this->entityField}"
+                    .  "\nAND eavb$i.{$this->attributeField} = $attribute"
+                    .  "\nAND (".implode(' OR ',$tmp).")";
+                $i++;
+            }elseif(is_int($attribute)){
+                $criteria->join .= "\nJOIN {$this->tableName} eavb$i"
+                    .  "\nON t.{$pk} = eavb$i.{$this->entityField}"
+                    .  "\nAND (".implode(' OR ',$tmp).")";
+                $i++;
+            }
+        }
+		
         $criteria->distinct = TRUE;
         $criteria->group .= "t.{$pk}";
         return $criteria;
